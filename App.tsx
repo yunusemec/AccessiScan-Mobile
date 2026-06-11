@@ -2,9 +2,9 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
 
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -52,7 +52,7 @@ export default function App() {
   return (
     <AuthProvider>
       <NavigationContainer>
-        <StatusBar style="light" />
+        <StatusBar style="light" backgroundColor="#0a0a0f" />
         <RootNavigator />
       </NavigationContainer>
     </AuthProvider>

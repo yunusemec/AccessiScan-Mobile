@@ -14,14 +14,16 @@ api.interceptors.request.use(async (config) => {
 export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/api/auth/login', { email, password }),
-  register: (name: string, email: string, password: string) =>
-    api.post('/api/auth/register', { name, email, password }),
+  register: (email: string, password: string) =>
+    api.post('/api/auth/register', { email, password }),
+  me: () => api.get('/api/auth/me'),
 };
 
-export const scanAPI = {
-  scanUrl: (url: string) => api.post('/api/scan/url', { url }),
-  scanHtml: (html: string) => api.post('/api/scan/html', { html }),
-  getHistory: () => api.get('/api/scan/history'),
+export const analyzeAPI = {
+  analyze: (type: 'url' | 'html', content: string) =>
+    api.post('/api/analyze', { type, content }),
+  history: () => api.get('/api/analyze/history'),
+  historyDetail: (id: string) => api.get(`/api/analyze/history/${id}`),
 };
 
 export default api;

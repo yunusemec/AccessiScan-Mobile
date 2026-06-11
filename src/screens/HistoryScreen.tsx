@@ -3,34 +3,44 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   SafeAreaView, ActivityIndicator, RefreshControl,
 } from 'react-native';
-import { scanAPI } from '../services/api';
+import { analyzeAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-interface ScanItem {
-  _id: string;
-  url?: string;
+interface AnalysisRow {
+  id: string;
+  url: string | null;
+  htmlSnippet: string | null;
   score: number;
+  results: { passed: boolean }[];
   createdAt: string;
 }
 
-function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 80 ? '#00d4ff' : score >= 60 ? '#ffd700' : '#ff6b6b';
+function ScorePill({ score }: { score: number }) {
+  const color = score >= 75 ? '#39ff14' : score >= 50 ? '#fbbf24' : '#f87171';
   return (
-    <View style={[styles.scoreBadge, { backgroundColor: color + '22', borderColor: color }]}>
-      <Text style={[styles.scoreText, { color }]}>{score}</Text>
+    <View style={[sp.wrap, { backgroundColor: color + '22', borderColor: color }]}>
+      <Text style={[sp.text, { color }]}>{score}</Text>
     </View>
   );
 }
+const sp = StyleSheet.create({
+  wrap: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  text: { fontSize: 13, fontWeight: '800' },
+});
 
 export default function HistoryScreen({ navigation }: any) {
-  const [history, setHistory] = useState<ScanItem[]>([]);
+  const { user } = useAuth();
+  const plan = user?.plan ?? 'FREE';
+
+  const [rows, setRows] = useState<AnalysisRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   const fetchHistory = useCallback(async () => {
     try {
-      const res = await scanAPI.getHistory();
-      setHistory(res.data?.scans || res.data || []);
+      const res = await analyzeAPI.history();
+      setRows((res.data as AnalysisRow[]).slice(0, 50));
       setError('');
     } catch {
       setError('Geçmiş yüklenemedi.');
@@ -40,57 +50,117 @@ export default function HistoryScreen({ navigation }: any) {
     }
   }, []);
 
-  useEffect(() => { fetchHistory(); }, [fetchHistory]);
+  useEffect(() => {
+    if (plan === 'FREE') { setLoading(false); return; }
+    fetchHistory();
+  }, [plan, fetchHistory]);
 
   const onRefresh = () => { setRefreshing(true); fetchHistory(); };
 
-  const renderItem = ({ item }: { item: ScanItem }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate('Result', { result: item })}
-    >
-      <View style={styles.cardLeft}>
-        <Text style={styles.cardUrl} numberOfLines={1}>{item.url || 'HTML Taraması'}</Text>
-        <Text style={styles.cardDate}>{new Date(item.createdAt).toLocaleDateString('tr-TR', {
-          day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
-        })}</Text>
-      </View>
-      <ScoreBadge score={item.score} />
-    </TouchableOpacity>
-  );
+  // FREE plan engel
+  if (!loading && plan === 'FREE') {
+    return (
+      <SafeAreaView style={s.container}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+            <Text style={s.backText}>← Geri</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={s.center}>
+          <View style={s.lockIcon}><Text style={{ fontSize: 32 }}>🔒</Text></View>
+          <Text style={s.lockTitle}>Bu Özellik Kilitli</Text>
+          <Text style={s.lockSub}>Analiz geçmişi Starter ve Pro planlarda mevcuttur.</Text>
+          <TouchableOpacity style={s.upgradeBtn} onPress={() => navigation.navigate('Pricing')}>
+            <Text style={s.upgradeBtnText}>Planları Gör</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const renderItem = ({ item, index }: { item: AnalysisRow; index: number }) => {
+    const passed = item.results?.filter(r => r.passed).length ?? 0;
+    const total = item.results?.length ?? 0;
+    const display = item.url
+      ? item.url.replace(/^https?:\/\//, '').slice(0, 55)
+      : item.htmlSnippet
+        ? item.htmlSnippet.slice(0, 55).replace(/\s+/g, ' ') + '...'
+        : 'HTML Analizi';
+    const typeColor = item.url ? '#00d4ff' : '#a78bfa';
+    const typeLabel = item.url ? 'URL' : 'HTML';
+
+    return (
+      <TouchableOpacity
+        style={s.row}
+        onPress={() => navigation.navigate('Result', { result: item })}
+        activeOpacity={0.7}
+      >
+        <Text style={s.rowNum}>{index + 1}</Text>
+        <View style={s.rowIcon}>
+          <Text>{item.url ? '🌐' : '📄'}</Text>
+        </View>
+        <View style={s.rowContent}>
+          <Text style={s.rowTitle} numberOfLines={1}>{display}</Text>
+          <Text style={s.rowMeta}>
+            {new Date(item.createdAt).toLocaleDateString('tr-TR', {
+              year: 'numeric', month: 'short', day: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            })}
+            {'  ·  '}
+            <Text style={{ color: typeColor }}>{typeLabel}</Text>
+          </Text>
+        </View>
+        {total > 0 && (
+          <View style={s.rowChecks}>
+            <Text style={s.rowCheckNum}>{passed}/{total}</Text>
+            <Text style={s.rowCheckLbl}>kontrol</Text>
+          </View>
+        )}
+        <ScorePill score={item.score} />
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Geri</Text>
+    <SafeAreaView style={s.container}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+          <Text style={s.backText}>← Geri</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Tarama Geçmişi</Text>
+        <View style={s.headerRight}>
+          <Text style={s.title}>Analiz Geçmişi</Text>
+          {!loading && rows.length > 0 && (
+            <Text style={s.subtitle}>{rows.length} analiz</Text>
+          )}
+        </View>
       </View>
 
       {loading ? (
-        <View style={styles.center}>
+        <View style={s.center}>
           <ActivityIndicator size="large" color="#00d4ff" />
+          <Text style={s.loadingText}>Yükleniyor...</Text>
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchHistory}>
-            <Text style={styles.retryText}>Tekrar Dene</Text>
+        <View style={s.center}>
+          <Text style={s.errorText}>{error}</Text>
+          <TouchableOpacity style={s.retryBtn} onPress={fetchHistory}>
+            <Text style={s.retryText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      ) : history.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyIcon}>📂</Text>
-          <Text style={styles.emptyTitle}>Henüz tarama yok</Text>
-          <Text style={styles.emptyText}>İlk taramanı yapmak için Ana Sayfa'ya git.</Text>
+      ) : rows.length === 0 ? (
+        <View style={s.center}>
+          <Text style={{ fontSize: 48, marginBottom: 12 }}>📊</Text>
+          <Text style={s.emptyTitle}>Henüz analiz yapmadınız.</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={s.emptyLink}>İlk analizinizi yapın →</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
-          data={history}
-          keyExtractor={(item) => item._id}
+          data={rows}
+          keyExtractor={item => item.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={s.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00d4ff" />}
         />
       )}
@@ -98,31 +168,38 @@ export default function HistoryScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0f' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 12 },
   backBtn: { padding: 4 },
-  backText: { color: '#00d4ff', fontSize: 15, fontWeight: '600' },
+  backText: { color: '#00d4ff', fontSize: 14, fontWeight: '600' },
+  headerRight: { alignItems: 'flex-end' },
   title: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  subtitle: { color: '#666', fontSize: 12, marginTop: 2 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  list: { padding: 16, gap: 10 },
-  card: {
-    backgroundColor: '#12121a', borderRadius: 12, padding: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderWidth: 1, borderColor: '#1e1e2e',
-  },
-  cardLeft: { flex: 1, marginRight: 12 },
-  cardUrl: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  cardDate: { color: '#666', fontSize: 12, marginTop: 4 },
-  scoreBadge: {
-    width: 52, height: 52, borderRadius: 26, borderWidth: 2,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  scoreText: { fontSize: 16, fontWeight: '800' },
-  errorText: { color: '#ff6b6b', fontSize: 15, marginBottom: 16 },
+  loadingText: { color: '#666', marginTop: 10, fontSize: 13 },
+  errorText: { color: '#f87171', fontSize: 14, marginBottom: 16 },
   retryBtn: { backgroundColor: '#00d4ff', borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10 },
   retryText: { color: '#0a0a0f', fontWeight: '700' },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  emptyText: { color: '#888', fontSize: 14, textAlign: 'center' },
+  emptyTitle: { color: '#aaa', fontSize: 15, fontWeight: '500', marginBottom: 10 },
+  emptyLink: { color: '#00d4ff', fontSize: 13 },
+  list: { paddingHorizontal: 12, paddingBottom: 30, gap: 6 },
+  row: {
+    backgroundColor: '#12121a', borderRadius: 10, padding: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderColor: '#1e1e2e',
+  },
+  rowNum: { color: '#444', fontSize: 11, fontFamily: 'monospace', width: 18, textAlign: 'right' },
+  rowIcon: { width: 34, height: 34, borderRadius: 8, backgroundColor: '#1e1e2e', justifyContent: 'center', alignItems: 'center' },
+  rowContent: { flex: 1, minWidth: 0 },
+  rowTitle: { color: '#fff', fontSize: 13, fontWeight: '500' },
+  rowMeta: { color: '#555', fontSize: 11, marginTop: 2 },
+  rowChecks: { alignItems: 'center' },
+  rowCheckNum: { color: '#666', fontSize: 11 },
+  rowCheckLbl: { color: '#444', fontSize: 10 },
+  lockIcon: { width: 64, height: 64, borderRadius: 14, backgroundColor: '#1e1e2e', borderWidth: 1, borderColor: '#2a2a3e', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  lockTitle: { color: '#fff', fontSize: 20, fontWeight: '700', marginBottom: 8 },
+  lockSub: { color: '#888', fontSize: 13, textAlign: 'center', marginBottom: 20 },
+  upgradeBtn: { backgroundColor: '#a855f7', borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12 },
+  upgradeBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });

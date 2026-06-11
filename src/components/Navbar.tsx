@@ -108,6 +108,11 @@ export default function Navbar() {
               <Text style={[styles.menuItemText, { color: colors.cyan }]}>?  WCAG Standartları Nedir?</Text>
             </TouchableOpacity>
 
+            {/* Hesap Ayarları */}
+            <TouchableOpacity style={styles.menuItemPlain} onPress={() => go('Account')}>
+              <Text style={styles.menuItemText}>⚙  Hesap Ayarları</Text>
+            </TouchableOpacity>
+
             <View style={styles.menuDivider} />
 
             {/* Çıkış */}

@@ -17,6 +17,10 @@ export const authAPI = {
   register: (email: string, password: string) =>
     api.post('/api/auth/register', { email, password }),
   me: () => api.get('/api/auth/me'),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.patch('/api/auth/password', { currentPassword, newPassword }),
+  deleteAccount: (password: string) =>
+    api.delete('/api/auth/account', { data: { password } }),
 };
 
 export const analyzeAPI = {

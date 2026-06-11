@@ -17,6 +17,7 @@ import PrivacyScreen from './src/screens/PrivacyScreen';
 import TermsScreen from './src/screens/TermsScreen';
 import PaymentSuccessScreen from './src/screens/PaymentSuccessScreen';
 import PaymentCancelScreen from './src/screens/PaymentCancelScreen';
+import AccountScreen from './src/screens/AccountScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -44,6 +45,7 @@ function AppStack() {
       <Stack.Screen name="Terms" component={TermsScreen} />
       <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
       <Stack.Screen name="PaymentCancel" component={PaymentCancelScreen} />
+      <Stack.Screen name="Account" component={AccountScreen} />
     </Stack.Navigator>
   );
 }

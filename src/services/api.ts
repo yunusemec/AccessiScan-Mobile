@@ -26,4 +26,16 @@ export const analyzeAPI = {
   historyDetail: (id: string) => api.get(`/api/analyze/history/${id}`),
 };
 
+export const aiAPI = {
+  chat: (message: string, analysisId?: string) =>
+    api.post('/api/ai/chat', { message, ...(analysisId ? { analysisId } : {}) }),
+};
+
+export const paymentAPI = {
+  createCheckout: (plan: 'STARTER' | 'PRO') =>
+    api.post('/api/payment/create-checkout', { plan }),
+  cancelSubscription: () => api.delete('/api/payment/cancel-subscription'),
+  reactivate: () => api.post('/api/payment/reactivate'),
+};
+
 export default api;

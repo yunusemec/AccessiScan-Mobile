@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
-  ScrollView,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
-import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { colors } from '../theme';
 
 export default function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
@@ -20,8 +19,7 @@ export default function LoginScreen({ navigation }: any) {
     if (!email || !password) { setError('E-posta ve şifre gerekli.'); return; }
     setLoading(true);
     try {
-      const res = await authAPI.login(email.trim(), password);
-      await login(res.data.token, res.data.user);
+      await login(email.trim(), password);
     } catch {
       setError('Geçersiz e-posta veya şifre.');
     } finally {
@@ -32,6 +30,9 @@ export default function LoginScreen({ navigation }: any) {
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={s.inner} keyboardShouldPersistTaps="handled">
+        <TouchableOpacity style={s.back} onPress={() => navigation.navigate('Landing')}>
+          <Text style={s.backText}>‹ Ana Sayfa</Text>
+        </TouchableOpacity>
 
         <View style={s.logoWrap}>
           <Text style={s.logo}>Accessi<Text style={s.logoCyan}>Scan</Text></Text>
@@ -69,51 +70,37 @@ export default function LoginScreen({ navigation }: any) {
           </View>
 
           <TouchableOpacity style={s.btn} onPress={handleLogin} disabled={loading}>
-            {loading
-              ? <ActivityIndicator color="#0a0a0f" />
-              : <Text style={s.btnText}>Giriş Yap</Text>}
+            {loading ? <ActivityIndicator color="#0a0a0f" /> : <Text style={s.btnText}>Giriş Yap</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
             <Text style={s.link}>Hesabın yok mu? <Text style={s.linkCyan}>Kayıt ol</Text></Text>
           </TouchableOpacity>
         </View>
-
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0f' },
+  container: { flex: 1, backgroundColor: colors.bgDeep },
   inner: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  back: { position: 'absolute', top: 40, left: 20 },
+  backText: { color: '#6b7280', fontSize: 13 },
   logoWrap: { alignItems: 'center', marginBottom: 32 },
-  logo: { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
-  logoCyan: { color: '#00d4ff' },
-  logoSub: { color: '#666', fontSize: 13, marginTop: 4 },
-  card: {
-    backgroundColor: '#12121a', borderRadius: 16, padding: 24,
-    borderWidth: 1, borderColor: '#1e1e2e',
-  },
-  errorBox: {
-    backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.2)', borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12,
-  },
-  errorText: { color: '#f87171', fontSize: 13, textAlign: 'center' },
-  label: { color: '#aaa', fontSize: 12, fontWeight: '500', marginBottom: 6, marginTop: 14 },
-  input: {
-    backgroundColor: '#0a0a0f', borderRadius: 8, padding: 12,
-    color: '#fff', fontSize: 14, borderWidth: 1, borderColor: '#1e1e2e',
-  },
+  logo: { fontSize: 26, fontWeight: '800', color: '#fff' },
+  logoCyan: { color: colors.cyan },
+  logoSub: { color: '#6b7280', fontSize: 13, marginTop: 4 },
+  card: { backgroundColor: 'rgba(13,13,26,0.9)', borderRadius: 16, padding: 24, borderWidth: 1, borderColor: colors.border },
+  errorBox: { backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12 },
+  errorText: { color: colors.redText, fontSize: 13, textAlign: 'center' },
+  label: { color: '#9ca3af', fontSize: 12, fontWeight: '500', marginBottom: 6, marginTop: 14 },
+  input: { backgroundColor: colors.bg, borderRadius: 8, padding: 12, color: '#fff', fontSize: 14, borderWidth: 1, borderColor: colors.border },
   pwRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  eyeBtn: { padding: 12, backgroundColor: '#0a0a0f', borderRadius: 8, borderWidth: 1, borderColor: '#1e1e2e' },
+  eyeBtn: { padding: 12, backgroundColor: colors.bg, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
   eyeText: { fontSize: 16 },
-  btn: {
-    backgroundColor: '#00d4ff', borderRadius: 10, paddingVertical: 14,
-    alignItems: 'center', marginTop: 20,
-  },
+  btn: { backgroundColor: colors.cyan, borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
   btnText: { color: '#0a0a0f', fontWeight: '700', fontSize: 15 },
-  link: { color: '#666', textAlign: 'center', marginTop: 16, fontSize: 13 },
-  linkCyan: { color: '#00d4ff' },
+  link: { color: '#6b7280', textAlign: 'center', marginTop: 16, fontSize: 13 },
+  linkCyan: { color: colors.cyan },
 });
